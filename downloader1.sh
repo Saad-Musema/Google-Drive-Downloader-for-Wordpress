@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Function to install drive
 install_drive() {
     echo "Installing drive..."
@@ -18,10 +20,14 @@ fi
 gdrive_download() {
     local service_account_file=$1
     local file_id=$2
-
     local script_dir=$(dirname "$0")
-
     local drive_dir="$script_dir/drive"
+
+    # Check if service account file exists and is of .json type
+    if [[ ! -f "$service_account_file" || "${service_account_file##*.}" != "json" ]]; then
+        echo "Error: Service account file is missing, not found, or not a .json file."
+        exit 1
+    fi
 
     if ! drive init --service-account-file "$service_account_file" "$drive_dir"; then
         echo "Error: Failed to initialize drive."
@@ -56,34 +62,57 @@ move_files() {
         return 1
     fi
 
-    if [ ! -d "$src_dir/plugins" ]; then
-        echo "Source directory $src_dir/plugins does not exist."
-        return 1
-    fi
+    check_directory "$dest_dir"
 
-    if [ ! -d "$src_dir/themes" ]; then
-        echo "Source directory $src_dir/themes does not exist."
-        return 1
-    fi
-
-    if [ ! -d "$dest_dir" ]; then
-        echo "Destination directory $dest_dir does not exist."
-        return 1
-    fi
+    ensure_directories "$dest_dir"
 
     echo "Moving files from $src_dir/plugins to $dest_dir/plugins"
     mv "$src_dir/plugins"/* "$dest_dir/plugins/"
 
     echo "Moving files from $src_dir/themes to $dest_dir/themes"
     mv "$src_dir/themes"/* "$dest_dir/themes/"
+
+
+    
 }
 
+# Function to ensure the necessary directories exist in the destination directory
+ensure_directories() {
+    local dest_dir=$1
+
+    # Check if 'plugins' directory exists, if not, create it
+    if [ ! -d "$dest_dir/plugins" ]; then
+        echo "Creating $dest_dir/plugins directory."
+        mkdir -p "$dest_dir/plugins"
+    fi
+
+    # Check if 'themes' directory exists, if not, create it
+    if [ ! -d "$dest_dir/themes" ]; then
+        echo "Creating $dest_dir/themes directory."
+        mkdir -p "$dest_dir/themes"
+    fi
+}
+
+check_directory(){
+    if [! -d "$directory"] ;then 
+    echo "Directory $directory does not exist."
+    return 1
+    fi
+}
+
+
+clean_up(){
+    cd ..
+    rm -rf ./drive
+    echo "Cleanup Complete."
+}
 
 # Check for required arguments
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
     echo "Usage: $0 <destination_directory> <service_account_file> <file_id>"
     exit 1
 fi
+
 
 dest_dir=$1
 service_account_file=$2
@@ -92,3 +121,6 @@ file_id=$3
 # Download the file and move files
 gdrive_download "$service_account_file" "$file_id"
 move_files "$dest_dir"
+
+# CLeans up the temporary files created 
+clean_up
