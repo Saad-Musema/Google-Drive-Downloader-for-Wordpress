@@ -107,6 +107,32 @@ clean_up(){
     echo "Cleanup Complete."
 }
 
+# Function to check if Docker and Docker Compose are installed
+check_docker_compose() {
+    if ! command -v docker &> /dev/null; then
+        echo "Docker is not installed. Please install Docker and try again."
+        exit 1
+    fi
+
+    if ! command -v docker-compose &> /dev/null; then
+        echo "Docker Compose is not installed. Please install Docker Compose and try again."
+        exit 1
+    fi
+}
+
+# Function to run Docker Compose if a docker-compose.yml file exists
+run_docker_compose() {
+    local script_dir=$(dirname "$0")
+    if [ -f "$script_dir/docker-compose.yml" ]; then
+        echo "docker-compose.yml found. Starting Docker Compose..."
+        docker-compose -f "$script_dir/docker-compose.yml" up -d
+        echo "Docker Compose is running."
+    else
+        echo "No docker-compose.yml file found in the script directory."
+    fi
+}
+
+
 # Check for required arguments
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
     echo "Usage: $0 <destination_directory> <service_account_file> <file_id>"
@@ -122,5 +148,11 @@ file_id=$3
 gdrive_download "$service_account_file" "$file_id"
 move_files "$dest_dir"
 
+
+
 # CLeans up the temporary files created 
 clean_up
+
+
+check_docker_compose
+run_docker_compose
